@@ -38,7 +38,7 @@ Order of work: parity rewrite → **Next** items → v1.0.
   **Approach:** a from-scratch rewrite on a branch, with today's `tui.tsx` kept
   as the behavior reference. Cut over only once behavior reaches parity. Scope
   is parity-only — the **Next** items are designed *around*, not built into,
-  the rewrite.
+  the rewrite. Tracked in [#1](https://github.com/jimmerioles/opencode-recap/issues/1).
 
 ## Next
 
