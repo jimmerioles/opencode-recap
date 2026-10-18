@@ -12,6 +12,9 @@ of the current session and renders it in the sidebar, outside the chat thread.
 This is a v2 port of [streetturtle/opencode-recap](https://github.com/streetturtle/opencode-recap),
 which targets the OpenCode v1 plugin API.
 
+Where the project is heading is in [ROADMAP.md](./ROADMAP.md); ideas are tracked
+in the [issue tracker](https://github.com/jimmerioles/opencode-recap/issues).
+
 ## Requirements
 
 - OpenCode **2.0.0 or newer** (the v1 plugin API is not supported).

@@ -1,0 +1,31 @@
+name: Idea
+description: Suggest an improvement, feature, or direction for opencode-recap.
+title: "[Idea] "
+labels: ["idea"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Raw ideas are welcome — this is the inbox. Promotion into `ROADMAP.md`
+        happens later.
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What would you like to see, in a sentence or two?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it helps
+      description: What problem does it solve, or what does it make better?
+    validations:
+      required: false
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Sketches, links, or alternatives you considered.
+    validations:
+      required: false
