@@ -17,11 +17,6 @@ type ModelChoice = {
 
 type SignalPair<T> = [() => T, (value: T) => void]
 
-const recaps = new Map<string, SignalPair<string | null>>()
-const loadings = new Map<string, SignalPair<boolean>>()
-const promptCounts = new Map<string, number>()
-const lastStatus = new Map<string, string>()
-
 function signalFor<T>(map: Map<string, SignalPair<T>>, sessionID: string, initial: T): SignalPair<T> {
   let pair = map.get(sessionID)
   if (!pair) {
@@ -29,14 +24,6 @@ function signalFor<T>(map: Map<string, SignalPair<T>>, sessionID: string, initia
     map.set(sessionID, pair)
   }
   return pair
-}
-
-function recapFor(sessionID: string) {
-  return signalFor(recaps, sessionID, null)
-}
-
-function loadingFor(sessionID: string) {
-  return signalFor(loadings, sessionID, false)
 }
 
 let cachedTheme: ResolvedTheme | undefined
@@ -143,25 +130,29 @@ RECENT TRANSCRIPT (last ${RECENT_MESSAGES} messages):
 ${transcript}`
 }
 
-function RecapSidebar(props: { sessionID: string; onRecap: () => void }) {
+type RecapSidebarProps = {
+  recap: () => string | null
+  loading: () => boolean
+  onRecap: () => void
+}
+
+function RecapSidebar(props: RecapSidebarProps) {
   const context = usePlugin()
-  const [recap] = recapFor(props.sessionID)
-  const [loading] = loadingFor(props.sessionID)
 
   return (
     <box flexDirection="column">
       <text
-        fg={loading() ? context.theme.text.muted : context.theme.text.base}
+        fg={props.loading() ? context.theme.text.muted : context.theme.text.base}
         attributes={TextAttributes.BOLD}
         onMouseDown={() => {
-          if (!loading()) props.onRecap()
+          if (!props.loading()) props.onRecap()
         }}
       >
-        {loading() ? "Recapping..." : "Recap"}
+        {props.loading() ? "Recapping..." : "Recap"}
       </text>
-      <Show when={recap() !== null && !loading()}>
+      <Show when={props.recap() !== null && !props.loading()}>
         <markdown
-          content={recap()!}
+          content={props.recap()!}
           syntaxStyle={syntaxStyle(context.theme)}
           fg={context.theme.text.muted}
         />
@@ -176,12 +167,26 @@ export default Plugin.define({
     const configured = readConfiguredModel(context.options)
     const keybind = readKeybind(context.options)
 
+    const recaps = new Map<string, SignalPair<string | null>>()
+    const loadings = new Map<string, SignalPair<boolean>>()
+    const promptCounts = new Map<string, number>()
+    const lastStatus = new Map<string, string>()
+
+    const recapFor = (sessionID: string) => signalFor(recaps, sessionID, null)
+    const loadingFor = (sessionID: string) => signalFor(loadings, sessionID, false)
+
+    // Slot content is mounted when the claim changes, so remount the sidebar
+    // whenever the visible recap or loading state changes.
+    let unregisterSidebar: (() => void) | undefined
+    let refreshSidebar: () => void = () => {}
+
     const generate = async (sessionID: string) => {
       const [, setRecap] = recapFor(sessionID)
       const [isLoading, setLoading] = loadingFor(sessionID)
       if (isLoading()) return
 
       setLoading(true)
+      refreshSidebar()
       try {
         if (configured.error) throw new Error(configured.error)
 
@@ -231,8 +236,29 @@ export default Plugin.define({
         setRecap(`*Recap failed: ${errorMessage(error)}*`)
       } finally {
         setLoading(false)
+        refreshSidebar()
       }
     }
+
+    const mountSidebar = () => {
+      unregisterSidebar?.()
+      unregisterSidebar = context.ui.slot({
+        append: "sidebar.content",
+        render: (input) => {
+          const [recap] = recapFor(input.sessionID)
+          const [loading] = loadingFor(input.sessionID)
+          return (
+            <RecapSidebar
+              recap={recap}
+              loading={loading}
+              onRecap={() => void generate(input.sessionID)}
+            />
+          )
+        },
+      })
+    }
+    refreshSidebar = mountSidebar
+    mountSidebar()
 
     const stopStatus = context.data.on("session.status", (event) => {
       const sessionID = event.data.sessionID
@@ -246,16 +272,10 @@ export default Plugin.define({
         if (count >= PROMPTS_UNTIL_STALE) {
           recapFor(sessionID)[1](null)
           promptCounts.set(sessionID, 0)
+          refreshSidebar()
         }
       }
       lastStatus.set(sessionID, status)
-    })
-
-    const stopSidebar = context.ui.slot({
-      append: "sidebar.content",
-      render: (input) => (
-        <RecapSidebar sessionID={input.sessionID} onRecap={() => void generate(input.sessionID)} />
-      ),
     })
 
     context.keymap.layer(() => ({
@@ -287,7 +307,7 @@ export default Plugin.define({
 
     return () => {
       stopStatus()
-      stopSidebar()
+      unregisterSidebar?.()
     }
   },
 })
