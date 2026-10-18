@@ -12,6 +12,11 @@ in day-to-day use. It is also the first npm publish, but that release is the
 *consequence* of reaching the bar, not a goal of its own. Until then, install
 from GitHub.
 
+Live tracker: [milestone v1.0](https://github.com/jimmerioles/opencode-recap/milestone/1),
+with issues sorted by horizon — [now](https://github.com/jimmerioles/opencode-recap/labels/now),
+[next](https://github.com/jimmerioles/opencode-recap/labels/next),
+[later](https://github.com/jimmerioles/opencode-recap/labels/later).
+
 **Definition of done:**
 
 - [ ] The parity rewrite has landed; no port-era scaffolding remains.
@@ -43,12 +48,12 @@ Order of work: parity rewrite → **Next** items → v1.0.
 ## Next
 
 - **Settle the configuration surface** before v1.0: a custom recap prompt or
-  section shape, and an explicit word budget.
+  section shape, and an explicit word budget. Tracked in #2.
 - **A test harness** for the pure helpers (`buildPrompt`,
   `readConfiguredModel`, `inferSessionModel`), wired into CI next to
-  `bun run typecheck`.
+  `bun run typecheck`. Tracked in #3.
 - **Persist the last recap per session** so it survives an OpenCode restart
-  (recaps are in-memory maps today).
+  (recaps are in-memory maps today). Tracked in #4.
 
 ## Later
 
