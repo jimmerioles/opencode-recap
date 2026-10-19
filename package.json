@@ -18,9 +18,18 @@
     "opencode",
     "opencode-plugin",
     "opencode-tui",
+    "ai",
+    "llm",
+    "ai-agents",
+    "coding-agents",
     "recap",
     "summary",
-    "tui"
+    "summarization",
+    "context-management",
+    "tui",
+    "terminal",
+    "developer-tools",
+    "solidjs"
   ],
   "exports": {
     ".": "./index.ts",
