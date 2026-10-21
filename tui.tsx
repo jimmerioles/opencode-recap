@@ -26,27 +26,6 @@ function signalFor<T>(map: Map<string, SignalPair<T>>, sessionID: string, initia
   return pair
 }
 
-let cachedTheme: ResolvedTheme | undefined
-let cachedStyle: SyntaxStyle | undefined
-
-function syntaxStyle(theme: ResolvedTheme): SyntaxStyle {
-  if (theme !== cachedTheme || !cachedStyle) {
-    cachedTheme = theme
-    cachedStyle = SyntaxStyle.fromStyles({
-      comment: { fg: theme.syntax.comment },
-      keyword: { fg: theme.syntax.keyword },
-      function: { fg: theme.syntax.function },
-      variable: { fg: theme.syntax.variable },
-      string: { fg: theme.syntax.string },
-      number: { fg: theme.syntax.number },
-      type: { fg: theme.syntax.type },
-      operator: { fg: theme.syntax.operator },
-      punctuation: { fg: theme.syntax.punctuation },
-    })
-  }
-  return cachedStyle
-}
-
 function readConfiguredModel(options: Readonly<Record<string, any>>): {
   model?: ModelChoice
   error?: string
@@ -133,6 +112,7 @@ ${transcript}`
 type RecapSidebarProps = {
   recap: () => string | null
   loading: () => boolean
+  syntaxStyle: (theme: ResolvedTheme) => SyntaxStyle
   onRecap: () => void
 }
 
@@ -153,7 +133,7 @@ function RecapSidebar(props: RecapSidebarProps) {
       <Show when={props.recap() !== null && !props.loading()}>
         <markdown
           content={props.recap()!}
-          syntaxStyle={syntaxStyle(context.theme)}
+          syntaxStyle={props.syntaxStyle(context.theme)}
           fg={context.theme.text.muted}
         />
       </Show>
@@ -166,6 +146,35 @@ export default Plugin.define({
   setup(context) {
     const configured = readConfiguredModel(context.options)
     const keybind = readKeybind(context.options)
+    const syntaxOwner = context.renderer.nativeScene
+
+    // Syntax styles are native resources owned by the renderer, so keep this
+    // cache per setup and release it when the plugin shuts down.
+    let cachedTheme: ResolvedTheme | undefined
+    let cachedStyle: SyntaxStyle | undefined
+
+    const syntaxStyle = (theme: ResolvedTheme): SyntaxStyle => {
+      if (theme !== cachedTheme || !cachedStyle) {
+        const style = SyntaxStyle.fromStyles(
+          {
+            comment: { fg: theme.syntax.comment },
+            keyword: { fg: theme.syntax.keyword },
+            function: { fg: theme.syntax.function },
+            variable: { fg: theme.syntax.variable },
+            string: { fg: theme.syntax.string },
+            number: { fg: theme.syntax.number },
+            type: { fg: theme.syntax.type },
+            operator: { fg: theme.syntax.operator },
+            punctuation: { fg: theme.syntax.punctuation },
+          },
+          syntaxOwner,
+        )
+        cachedStyle?.destroy()
+        cachedTheme = theme
+        cachedStyle = style
+      }
+      return cachedStyle
+    }
 
     const recaps = new Map<string, SignalPair<string | null>>()
     const loadings = new Map<string, SignalPair<boolean>>()
@@ -251,6 +260,7 @@ export default Plugin.define({
             <RecapSidebar
               recap={recap}
               loading={loading}
+              syntaxStyle={syntaxStyle}
               onRecap={() => void generate(input.sessionID)}
             />
           )
@@ -305,9 +315,13 @@ export default Plugin.define({
       bindings: ["recap.generate"],
     }))
 
-    return () => {
+    return async () => {
       stopStatus()
       unregisterSidebar?.()
+      await context.renderer.idle()
+      cachedStyle?.destroy()
+      cachedStyle = undefined
+      cachedTheme = undefined
     }
   },
 })
