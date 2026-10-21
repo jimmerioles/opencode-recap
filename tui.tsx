@@ -155,6 +155,7 @@ export default Plugin.define({
 
     const syntaxStyle = (theme: ResolvedTheme): SyntaxStyle => {
       if (theme !== cachedTheme || !cachedStyle) {
+        const previous = cachedStyle
         const style = SyntaxStyle.fromStyles(
           {
             comment: { fg: theme.syntax.comment },
@@ -169,9 +170,11 @@ export default Plugin.define({
           },
           syntaxOwner,
         )
-        cachedStyle?.destroy()
         cachedTheme = theme
         cachedStyle = style
+        if (previous) {
+          void context.renderer.idle().then(() => previous.destroy())
+        }
       }
       return cachedStyle
     }
